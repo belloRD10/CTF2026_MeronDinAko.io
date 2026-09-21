@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Video Player</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: radial-gradient(circle at 20% 20%, #1a1a2e, #16213e 60%, #0f3460);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    color: #fff;
+  }
+  h1 {
+    margin-bottom: 20px;
+    font-size: 1.8rem;
+    text-shadow: 0 2px 8px rgba(0,0,0,.5);
+  }
+  .player-wrapper {
+    width: 100%;
+    max-width: 960px;
+    background: #000;
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 20px 60px rgba(0,0,0,.7);
+  }
+  .video-container {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    background: #000;
+  }
+  video {
+    width: 100%;
+    height: 100%;
+    display: block;
+    cursor: pointer;
+  }
+  .overlay {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0,0,0,.45);
+    opacity: 0;
+    transition: opacity .3s;
+    pointer-events: none;
+  }
+  .video-container:hover .overlay,
+  .video-container.paused .overlay {
+    opacity: 1;
+  }
+  .big-btn {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    border: none;
+    background: rgba(255,255,255,.2);
+    color: #fff;
+    font-size: 36px;
+    cursor: pointer;
+    backdrop-filter: blur(4px);
+    transition: transform .2s, background .2s;
+  }
+  .big-btn:hover { transform: scale(1.1); background: rgba(255,255,255,.35); }
+  .controls {
+    background: #111;
+    padding: 10px 16px;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+  }
+  .controls button {
+    border: none;
+    background: transparent;
+    color: #fff;
+    font-size: 18px;
+    cursor: pointer;
+    padding: 6px;
+    border-radius: 8px;
+    line-height: 1;
+    transition: background .15s, transform .15s;
+    min-width: 30px;
+  }
+  .controls button:hover { background: #333; transform: scale(1.05); }
+  .controls button:active { transform: scale(.95); }
+  .controls .spacer { flex: 1; }
+  .time-display {
+    font-size: 13px;
+    color: #ccc;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+  .seek-container {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    order: -1;
+    margin-bottom: 4px;
+  }
+  input[type=range].seek {
+    flex: 1;
+    -webkit-appearance: none;
+    appearance: none;
+    height: 5px;
+    border-radius: 5px;
+    background: linear-gradient(to right, #e94560 var(--progress, 0%), #444 var(--progress, 0%));
+    outline: none;
+    cursor: pointer;
+  }
+  input[type=range].seek::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: #e94560;
+    cursor: pointer;
+    transition: transform .15s;
+  }
+  input[type=range].seek::-webkit-slider-thumb:hover { transform: scale(1.3); }
+  input[type=range].seek::-moz-range-thumb {
+    width: 14px;
+    height: 14px;
+    border: none;
+    border-radius: 50%;
+    background: #e94560;
+    cursor: pointer;
+  }
+  .controls .download-btn {
+    background: none;
+    font-size: 18px;
+  }
+  .controls .download-btn:hover { background: #2a4d2a; }
+  @media (max-width: 640px) {
+    h1 { font-size: 1.3rem; }
+    .time-display { font-size: 12px; }
+    .big-btn { width: 64px; height: 64px; font-size: 28px; }
+  }
+</style>
+</head>
+<body>
+<h1>&#9654; Video Player</h1>
+
+<div class="player-wrapper">
+  <div class="video-container" id="videoContainer">
+    <video id="video" preload="metadata" playsinline controlslist="nodownload noremoteplayback">
+      <source src="87e1ad00-4cd8-4910-852c-0f46eeac000 NEEW.mp4" type="video/mp4">
+      Your browser does not support the video tag.
+    </video>
+    <div class="overlay">
+      <button class="big-btn" id="centerPlay">&#9654;</button>
+    </div>
+  </div>
+
+  <div class="controls">
+    <div class="seek-container">
+      <input type="range" class="seek" id="seek" min="0" max="100" step="0.1" value="0">
+    </div>
+    <button id="btnPlay" title="Play / Pause (Space)">&#9654;</button>
+    <button id="btnBackward" title="Rewind 10s">&#9194;</button>
+    <button id="btnForward" title="Forward 10s">&#9193;</button>
+    <button id="btnRestart" title="Restart">&#8634;</button>
+    <span class="time-display" id="timeDisplay">0:00 / 0:00</span>
+    <span class="spacer"></span>
+    <button id="btnVolume" title="Mute (M)">&#128266;</button>
+    <input type="range" class="seek" id="volume" min="0" max="100" step="1" value="100" style="max-width:100px;">
+    <button id="btnRate" title="Playback speed">1x</button>
+    <button id="btnDownload" class="download-btn" title="Download video">&#11015;</button>
+    <button id="btnFullscreen" title="Fullscreen (F)">&#9974;</button>
+  </div>
+</div>
+
+<script>
+(function () {
+  var video = document.getElementById('video');
+  var seek = document.getElementById('seek');
+  var volume = document.getElementById('volume');
+  var timeDisplay = document.getElementById('timeDisplay');
+  var centerPlay = document.getElementById('centerPlay');
+  var container = document.getElementById('videoContainer');
+  var rates = [0.5, 0.75, 1, 1.25, 1.5, 2];
+  var rateIdx = 2;
+
+  function fmt(s) {
+    if (isNaN(s)) return '0:00';
+    s = Math.floor(s);
+    var h = Math.floor(s / 3600);
+    var m = Math.floor((s % 3600) / 60);
+    var sec = s % 60;
+    var out = (h > 0 ? h + ':' : '') + (h > 0 ? String(m).padStart(2, '0') : m) + ':' + String(sec).padStart(2, '0');
+    return out;
+  }
+
+  function updateProgress() {
+    if (video.duration) {
+      var p = (video.currentTime / video.duration) * 100;
+      seek.value = p;
+      seek.style.setProperty('--progress', p + '%');
+      timeDisplay.textContent = fmt(video.currentTime) + ' / ' + fmt(video.duration);
+    }
+  }
+
+  function updatePlayBtn() {
+    var playing = !video.paused && !video.ended;
+    document.getElementById('btnPlay').innerHTML = playing ? '&#10074;&#10074;' : '&#9654;';
+    centerPlay.innerHTML = playing ? '&#10074;&#10074;' : '&#9654;';
+    container.classList.toggle('paused', !playing);
+  }
+
+  function togglePlay() {
+    if (video.paused || video.ended) video.play(); else video.pause();
+  }
+
+  video.addEventListener('loadedmetadata', function () {
+    updateProgress();
+    volume.value = video.volume * 100;
+  });
+  video.addEventListener('timeupdate', updateProgress);
+  video.addEventListener('play', updatePlayBtn);
+  video.addEventListener('pause', updatePlayBtn);
+  video.addEventListener('ended', updatePlayBtn);
+
+  video.addEventListener('click', togglePlay);
+  centerPlay.addEventListener('click', togglePlay);
+
+  document.getElementById('btnPlay').addEventListener('click', togglePlay);
+
+  document.getElementById('btnBackward').addEventListener('click', function () {
+    video.currentTime = Math.max(0, video.currentTime - 10);
+  });
+
+  document.getElementById('btnForward').addEventListener('click', function () {
+    video.currentTime = Math.min(video.duration || 0, video.currentTime + 10);
+  });
+
+  document.getElementById('btnRestart').addEventListener('click', function () {
+    video.currentTime = 0;
+    video.play();
+  });
+
+  seek.addEventListener('input', function () {
+    if (video.duration) {
+      video.currentTime = (seek.value / 100) * video.duration;
+      seek.style.setProperty('--progress', seek.value + '%');
+    }
+  });
+
+  volume.addEventListener('input', function () {
+    video.volume = volume.value / 100;
+    video.muted = video.volume === 0;
+    document.getElementById('btnVolume').innerHTML = video.muted ? '&#128263;' : (video.volume > 0.5 ? '&#128266;' : '&#128265;');
+  });
+
+  document.getElementById('btnVolume').addEventListener('click', function () {
+    video.muted = !video.muted;
+    document.getElementById('btnVolume').innerHTML = video.muted ? '&#128263;' : (video.volume > 0.5 ? '&#128266;' : '&#128265;');
+  });
+
+  document.getElementById('btnRate').addEventListener('click', function () {
+    rateIdx = (rateIdx + 1) % rates.length;
+    video.playbackRate = rates[rateIdx];
+    this.textContent = rates[rateIdx] + 'x';
+  });
+
+  document.getElementById('btnDownload').addEventListener('click', function () {
+    var a = document.createElement('a');
+    a.href = '87e1ad00-4cd8-4910-852c-0f46eeac000 NEEW.mp4';
+    a.download = '87e1ad00-4cd8-4910-852c-0f46eeac000 NEEW.mp4';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  });
+
+  document.getElementById('btnFullscreen').addEventListener('click', function () {
+    if (container.requestFullscreen) container.requestFullscreen();
+    else if (container.webkitRequestFullscreen) container.webkitRequestFullscreen();
+  });
+
+  document.addEventListener('keydown', function (e) {
+    if (e.code === 'Space') { e.preventDefault(); togglePlay(); }
+    else if (e.code === 'ArrowRight') video.currentTime = Math.min(video.duration || 0, video.currentTime + 5);
+    else if (e.code === 'ArrowLeft') video.currentTime = Math.max(0, video.currentTime - 5);
+    else if (e.code === 'KeyF') {
+      if (container.requestFullscreen) container.requestFullscreen();
+      else if (container.webkitRequestFullscreen) container.webkitRequestFullscreen();
+    }
+    else if (e.code === 'KeyM') video.muted = !video.muted;
+  });
+
+  updatePlayBtn();
+})();
+</script>
+</body>
+</html>
